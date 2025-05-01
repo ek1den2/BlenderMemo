@@ -24,7 +24,7 @@ class SaveOperator(bpy.types.Operator):
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         log = {
-            "data": now,
+            "date": now,
             "memo": self.user_text
         }
 
@@ -53,28 +53,66 @@ class SaveOperator(bpy.types.Operator):
 
 class LoadOperator(bpy.types.Operator):
     bl_idname = "wm.load_log"
-    bl_label = "作業メモを表示"
+    bl_label = "前回の作業"
     bl_description = "保存した作業内容を表示する"
     bl_options = {'REGISTER'}
 
     filepath: bpy.props.StringProperty() # type: ignore
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width=500)
+        return context.window_manager.invoke_props_dialog(self, width=350)
 
     def draw(self, context):
+        filename = os.path.basename(self.filepath)
+        print("ファイル名", filename)
         log_path = os.path.dirname(self.filepath) + "/log.json"
+        print("ログパス", log_path)
         try:
             with open(log_path, "r", encoding="utf-8") as f:
-                for text in f:
-                    print(text.strip())
+                json_data = json.load(f)[filename]
             self.report({'INFO'}, "ログを読み込みました")
         except Exception as e:
             self.report({'ERROR'}, f"ログが読み込めませんでした: {e}")
+        
+        latest_memo = max(
+            (memo for memo in json_data),
+            key=lambda m: datetime.strptime(m["date"], "%Y-%m-%d %H:%M")
+        )
+
+        dt = datetime.strptime(latest_memo['date'], "%Y-%m-%d %H:%M")
+        timedate = get_relative_time(dt)
+        print("時間:", latest_memo['date'])
 
         layout = self.layout
-        layout.label(text = text)
+        layout.label(text = timedate)
+        layout.label(text = latest_memo['memo'])
     
     def execute(self, context):
         return {'FINISHED'}
-    
+
+
+def get_relative_time(post_time: datetime):
+    now = datetime.now()
+    delta = now - post_time
+
+    seconds = delta.total_seconds()
+    minutes = seconds // 60
+    hours = minutes // 60
+    days = delta.days
+
+    if seconds < 60:
+        return "たった今"
+    elif minutes < 60:
+        return f"{int(minutes)}分前"
+    elif hours < 24:
+        return f"{int(hours)}時間前"
+    elif days < 7:
+        return f"{int(days)}日前"
+    elif days < 30:
+        weeks = days // 7
+        return f"{int(weeks)}週間前"
+    elif days < 365:
+        month = days // 30.5
+        return f"{int(month)}ヶ月前"
+    else:
+        return post_time.strftime("%Y年%m月")
