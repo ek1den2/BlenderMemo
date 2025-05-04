@@ -9,8 +9,7 @@ bl_info = {
     "location": "保存時、初回起動時にポップ",
     "description": "作業内容を記録するアドオン。ログは保存したblendファイルと同じ場所にlog.jsonとして保存",
     "warning": "開発中",
-    "support": "COMMUNIT"
-    "Y",
+    "support": "COMMUNIT",
     "category": "Interface"
 }
 
